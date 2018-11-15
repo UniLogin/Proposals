@@ -1,0 +1,13 @@
+@startuml
+
+title Subscription
+actor Relayer
+participant Identity
+participant Subscription
+
+
+
+Relayer -> Identity: executeSigned
+Identity -> Subscription: canExecute
+
+@enduml
