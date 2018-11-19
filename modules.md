@@ -25,9 +25,9 @@ contract IERC1077 {
         uint256 value,
         bytes data) onlyModule returns (bytes32);
 
-    function addModule(address moduleAddress, bytes data) internal;
+    function addModule(Module module, bytes data) internal;
 
-    function removeModule(address moduleAddress) internal;
+    function removeModule(Module module) internal;
 }
 ```
 
@@ -61,6 +61,7 @@ We would like to test our ideas against as many example modules as possible. Som
 - Recurring payments
 - Gifts
 - Daily limits
+- Batch execution
 
 ## Example module: Universal Login
 
@@ -119,7 +120,7 @@ contract RelayerNetwork {
         uint gasLimit,
         IERC1077.OperationType operationType,
         bytes signatures) public view returns (bool) {
-            if (this.currentRelyerAddress() == msg.sender) {
+            if (this.currentRelyerAddress() == msg.origin) {
                 return true;
             }
         revert('Unauthorised relayer');
@@ -138,7 +139,7 @@ contract RecurringPayment {
     }
 
     function withdrawl() {
-        if (isSubscribed(msg.sender)) {
+        if (this.isSubscribed(msg.sender)) {
             this.owner.moduleExecute(...);
         }
     }
@@ -147,8 +148,46 @@ contract RecurringPayment {
         ...
     }
 
-    function cancel(address beneficient) {
+    function cancel(address beneficient) onlyOwner {
         ...
+    }
+
+    function canExecute(
+        address to,
+        uint256 value,
+        bytes data,
+        uint nonce,
+        uint gasPrice,
+        address gasToken,
+        uint gasLimit,
+        IERC1077.OperationType operationType,
+        bytes signatures) public view returns (bool) {
+            //Ignore
+            return false;
+        }
+    }
+}
+```
+
+### Example module: Batch transactions
+```
+contract BatchTransactions {
+    constructor(IERC1077 owner) {
+        this.owner = owner;
+    }
+
+    function executeBatch(address [] to,
+        uint256 [] value,
+        bytes [] data,
+        uint [] nonce,
+        uint [] gasPrice,
+        address [] gasToken,
+        uint [] gasLimit,
+        IERC1077.OperationType [] operationType,
+        bytes signatures) {
+            for (uint  i = 0; i < value.length; i++) {
+                owner.executeModule(...);
+            }
     }
 
     function canExecute(
@@ -172,7 +211,6 @@ contract RecurringPayment {
 Modules are extremely vulnerable from a security perspective and therefore should be used with caution. We would expect that user rarely adds/remove modules and that only well audited/formally verified modules are available to use on mainnet.
 
 ## Three possible semantics
-There are
 
 ### True-false-revert
 This is the current proposal. It assumes that each module can return true or false or it can revert. Above examples are written using following semantics.
@@ -186,3 +224,4 @@ This is an alternate proposal. It assumes that each module can return true or fa
 ### Filters and modules
 This is an alternate proposal. It assumes that each module can return true or false. It has two types of modules: filters and standard modules. The filter can only reject a transaction. While the standard module can only approve the transaction.
 ![True-false-revert](/out/modules/proposal-two-types.png)
+
