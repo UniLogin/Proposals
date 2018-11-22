@@ -37,17 +37,17 @@ Execution gas cost can be split into two subparts:
 ## Possible revert reasons
 As we want to guarantee a refund will always happen, let's iterate over possible reasons for revert that might prevent it:
 * **external execution** - this is revert happening in external to our smart contract execution - when doing an external call (that will be stored as an internal transaction in the blockchain history). The semantics of `call` guarantees that the call will return regardless of revert, so this case is covered.
-* **internal execution** - this revert happens when executing ERC1077 code. Preventing unintentional reverts can be achieved by writing a bugless smart contract.
-If the smart contract wants to revert intentionally (due to one of the rules broken) we want to at least revert as soon as possible to reduce the cost of execution.
+* **internal execution** - this revert happens when executing ERC1077 code. This is the most tricky part, as contract might want to do a number of preliminary checks that need to be updated
+* **out of gas exception** - preventing this can be achieved by preminary checks of gas at the beginning of transaction
+* **not enough funds** - this happens when operation used more gas then the contract can pay for. This can be prevented by calculating max gas and the start of smart contract execution.
+
+## Big Data attack
+Big data attack happens when an attacker creates a message with a data field of significant size. The transaction is propagated by relayer but fails on preliminary checks (e.g. not enough gas to process transaction further) Relayer needs to pay for the whole transaction, but a refund will not happen. An attacker can drain relayer wallet that way. This can not be prevented in the general case.
 
 
-* **out of gas exception** - preventing this can be  achieved by a combination of the two:
-    * checking the amount of gas at the beginning and
-    * limiting the amount of gas passed to the call
-Together it should make sure there is enough gas to finish execution
-* not enough funds - can be prevented by calculating max gas and the start of smart contract execution
-
-TODO: Note on nonce and modules
+## Relayer network and refund guarantee
+In general case, a refund cannot be guaranteed due to the front-running. At any point of time state of the contract (and blockchain can be changed) and therefore transaction that supposed to succeed will fail by the time it is being mined.
+But if we limit allowed relayers to one (which could be the case for relayer network). Then as a first preliminary check, we can rule out the wrong relayer. Now relayer can run a simulated transaction and see if it succeeds and only then propagate it to the network.
 
 ## Proposed refund schema
 We propose to split refund into two costs:
@@ -61,24 +61,23 @@ We propose to split refund into two costs:
 * `executionGasLimit` - dynamic gas cost, calculated from execution
 In Gnosis Safe this parameter is called `safeTxGas`
 
-TODO: Finish
 
-Max gas calculation
+## Not enough funds prevention
+Max gas calculation allow to prevent 'Not enough funds' problem.
 ```
 maxGasFrom = token.balanceOf(this)/gasPrice;
 maxGas = min(executionGasLimit, maxGas);
 ```
 
-TODO: Add picture
 
 ### Relayer checks
 * check if `dataGas` is ok
 * check if `executionGas` is ok (enough to verify signatures and do refund)
 * check if signatures are ok
 * token is whitelisted
-* run estimation 
+* run estimation
     * check if execution is succesful
-    * and check if there is enough funds 
+    * and check if there is enough funds
 TODO: Finish
 
 ### Smart contracts checks
@@ -93,42 +92,31 @@ TODO: Finish
 ## Calculations of fixed gas
 
 ### Transaction Gas Cost
-* `transactionCost` - constant transaction cost 
+* `transactionCost` - constant transaction cost
 * `dataGas` - cost of transaction data. We can estimate it by fill `executeSigned` function with parameters (with fixedGas as 0) and then get data. Then we calculate 4 gas for every zero byte and 68 for every non-zero byte of data. After all we add 128 ( 64 * 2 - fixed gas can't be higher than 8 MLN (2 bytes)).
-	
+
 
 ### Non Measurable Execution Cost
 Non Measurable Execution Cost must include basic transaction cost and refund cost. Refund cost can be calculated assuming we are using standard ERC-20 token with reasonable implementation.
-
-
-### Gas used by refund function
+Below is a Gas used by refund function in different scenarios.
 
 #### Refund in token
 
-Refund cost depends on balance of sender and receiver. The most expensive option is, when sender sends all funds (ends with zero) to receiver, whos balance is zero. 
+Refund cost depends on balance of sender and receiver. The most expensive option is, when sender sends all funds (ends with zero) to receiver, whos balance is zero.
 
 |	| To non-zero | To zero |
 | :---: | :---: | :---: |
 | From non-zero |	38911 |	53911 |
 | From zero | 24103 | 39103 |
-		
-#### Refund in ether	
+
+#### Refund in ether
 Cases, when we clean out account, are highly unlinkely.
 
 |	| To non-zero | To zero |
 | --- | :---: | :---: |
 | From non-zero |	29950 |	- |
 | From zero | - | - |
-		
 
-TODO: Fix grammar and typos
-
-
-
-
-## Known security vulnerabilities
-A malicious actor can create a two transactions with the same nonce and propagte them into the network. Only one transaction will be successful while the other one will revert. Cost f
-Furthermore attacker might elevalte cost of transaction by passing a lot of data. That can be prevented in case of centralized relayer, but is hard to implement in distributed environment.
 
 ## Summary
 Here is a short summary based on our research in context of our goals:
