@@ -5,39 +5,43 @@ The following document is a proposal how to structure refund for ERC #1077 messa
 The aim of refund is for the #1077 smart contract to get the return of the cost of transaction execution to the relayer.
 
 In particular, we want to:
-1. The amount return in gas to be equal to the amount of gas of actual transaction.
-If it is impossible then at least we want to be as close as possible.
+1. The amount return in gas to be as close as possible to the actual gas used.
 2. Guarantee refund will always happen.
-If it is impossible, we would like to minimize the cost of the reverted transaction and also reduce the risk of revert.
 
 ## Gas price and gas token
 The refund should be simply executed as a transfer of funds is given `gas token` (ether if token address equals `0x`). Cost of execution is calculated from `gas used` and `gas price`:
 `execution cost = gas price * gas used`
 
-## Signed message to a transaction
-Relayer simply translates gas price and gas token according to his own pricing strategy to a transaction with gas price in ethereum.
+## Converting signed message to a transaction
+Relayer simply translates `gas price` and `gas token` according to his own pricing strategy to a transaction with `gas price` in Ethereum.
 
-### Considerations
-How to prevent the user from accidentally put too high of a gas price is an open matter.
-
+### Consideration: too high of a gas price
+How to prevent the user from accidentally put too high of a gas price is an open problem.
 
 ## Components of execution cost
-
 We can split Gas used into the following components:
 
-* _Transaction gas cost_ - which is basic transaction gas cost plus the cost of transaction data.
-Basic transaction cost is 21000 gas and transaction data is charged 4 gas for every zero byte of data and 68 for every non-zero byte of data.
+* _Transaction gas cost_ - which is sum of basic transaction gas cost plus the cost of transaction data.
+    * Basic transaction cost is 21000 gas
+    * Transaction data is charged:
+        * 4 gas for every zero byte of data
+        * 68 for every non-zero byte of data.
 
 * _Execution gas cost_ - which is the cost of execution of the smart contract.
 Execution gas cost can be split into two subparts:
     * _Measurable execution cost_ - the part that we can measure by simply substrating `gas left` at the beginning of execution and `gas left` at the end of execution
     * _Non-measurable execution cost_ - all that remains in execution cost, that includes the calculation itself and refund
 
+    ![_Execution gas cost](/images/execute.png)
+
 ## Possible revert reasons
-Possible reasons for revert are:
-* _revert in the external execution_ (internal transaction) - this is not a problem, as the semantics of `call` guarantees that the call will return regardless of revert
-* _revert in internal execution_ - unintentional reverts can be achieved by writing a bugless smart contract. Intentionally we want to revert as soon as possible to reduce the cost of execution
-* out of gas exception - this can be  achieved by a combination of the two:
+As we want to guarantee a refund will always happen, let's iterate over possible reasons for revert that might prevent it:
+* **external execution** - this is revert happening in external to our smart contract execution - when doing an external call (that will be stored as an internal transaction in the blockchain history). The semantics of `call` guarantees that the call will return regardless of revert, so this case is covered.
+* **internal execution** - this revert happens when executing ERC1077 code. Preventing unintentional reverts can be achieved by writing a bugless smart contract.
+If the smart contract wants to revert intentionally (due to one of the rules broken) we want to at least revert as soon as possible to reduce the cost of execution.
+
+
+* **out of gas exception** - preventing this can be  achieved by a combination of the two:
     * checking the amount of gas at the beginning and
     * limiting the amount of gas passed to the call
 Together it should make sure there is enough gas to finish execution
@@ -59,16 +63,26 @@ In Gnosis Safe this parameter is called `safeTxGas`
 
 TODO: Finish
 
-TODO: Max gas calculation
+Max gas calculation
+```
+maxGasFrom = token.balanceOf(this)/gasPrice;
+maxGas = min(executionGasLimit, maxGas);
+```
 
 TODO: Add picture
 
 ### Relayer checks
 * check if `dataGas` is ok
-* run estimation and check if there is enough funds
+* check if `executionGas` is ok (enough to verify signatures and do refund)
+* check if signatures are ok
+* token is whitelisted
+* run estimation 
+    * check if execution is succesful
+    * and check if there is enough funds 
 TODO: Finish
 
 ### Smart contracts checks
+* Check signatures
 * Check for minimal amount of tokens
 * Check the amount of token on the smart contract to do minimal execution
 * Limit amout of gas passed to external call
@@ -106,7 +120,8 @@ Cases, when we clean out account, are highly unlinkely.
 TODO: Fix grammar and typos
 
 ## Known security vulnerabilities
-TODO: Front running with modules vulnerabilities.
+A malicious actor can create a two transactions with the same nonce and propagte them into the network. Only one transaction will be successful while the other one will revert. Cost f
+Furthermore attacker might elevalte cost of transaction by passing a lot of data. That can be prevented in case of centralized relayer, but is hard to implement in distributed environment.
 
 ## Summary
 Here is a short summary based on our research in context of our goals:
