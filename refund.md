@@ -52,10 +52,10 @@ We propose to split refund into two costs:
   fixedGas = transactionGasCost + nonMeasurableExecutionCost
   ```
   _transactionGasCost_ is calculated by sdk and checked by relayer.
-  _nonMeasurableExecutionCost_ is a constant, more consideration on it you can find below in _Non Measurable Execution Cost_ section
-  In Gnosis Safe this parameter is called `dataGas`.
+  _nonMeasurableExecutionCost_ is a constant, more consideration on it you can find below in _Non Measurable Execution Cost_ section.
+  In Gnosis Safe `fixedGas` parameter is called `dataGas`.
 * `executionGasLimit` - dynamic gas cost, calculated from execution
-In Gnosis Safe this parameter is called `safeGas`
+In Gnosis Safe this parameter is called `safeTxGas`
 
 TODO: Finish
 
@@ -80,6 +80,28 @@ TODO: Finish
 Non Measurable Execution Cost must include basic transaction cost and refund cost. Refund cost can be calculated assuming we are using standard ERC-20 token with reasonable implementation.
 
 TODO: Copy-paste our findings
+
+		
+
+### Gas used by refund function
+
+#### Refund in token
+
+Refund cost depends on balance of sender and receiver. The most expensive option is, when sender sends all funds (ends with zero) to receiver, whos balance is zero. 
+
+|	| To non-zero | To zero |
+| :---: | :---: | :---: |
+| From non-zero |	38911 |	53911 |
+| From zero | 24103 | 39103 |
+		
+#### Refund in ether	
+Cases, when we clean out account, are highly unlinkely.
+
+|	| To non-zero | To zero |
+| --- | :---: | :---: |
+| From non-zero |	29950 |	- |
+| From zero | - | - |
+		
 
 TODO: Fix grammar and typos
 
