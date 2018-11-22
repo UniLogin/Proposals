@@ -57,7 +57,7 @@ We propose to split refund into two costs:
   ```
   _transactionGasCost_ is calculated by sdk and checked by relayer.
   _nonMeasurableExecutionCost_ is a constant, more consideration on it you can find below in _Non Measurable Execution Cost_ section.
-  In Gnosis Safe `fixedGas` parameter is called `dataGas`.
+  In Gnosis Safe `fixedGas` parameter is called `dataGas`. Learn more about it in _Calculations of fixed gas_ section.
 * `executionGasLimit` - dynamic gas cost, calculated from execution
 In Gnosis Safe this parameter is called `safeTxGas`
 
@@ -90,12 +90,16 @@ TODO: Finish
 
 TODO: Finish
 
+## Calculations of fixed gas
+
+### Transaction Gas Cost
+* `transactionCost` - constant transaction cost 
+* `dataGas` - cost of transaction data. We can estimate it by fill `executeSigned` function with parameters (with fixedGas as 0) and then get data. Then we calculate 4 gas for every zero byte and 68 for every non-zero byte of data. After all we add 128 ( 64 * 2 - fixed gas can't be higher than 8 MLN (2 bytes)).
+	
+
 ### Non Measurable Execution Cost
 Non Measurable Execution Cost must include basic transaction cost and refund cost. Refund cost can be calculated assuming we are using standard ERC-20 token with reasonable implementation.
 
-TODO: Copy-paste our findings
-
-		
 
 ### Gas used by refund function
 
@@ -119,6 +123,9 @@ Cases, when we clean out account, are highly unlinkely.
 
 TODO: Fix grammar and typos
 
+
+
+
 ## Known security vulnerabilities
 A malicious actor can create a two transactions with the same nonce and propagte them into the network. Only one transaction will be successful while the other one will revert. Cost f
 Furthermore attacker might elevalte cost of transaction by passing a lot of data. That can be prevented in case of centralized relayer, but is hard to implement in distributed environment.
@@ -130,3 +137,9 @@ Here is a short summary based on our research in context of our goals:
 
 ## Acknowledgements
 Special thanks to Gnosis Team, whom code we used to look for hints when we were running out of ideas :)
+
+
+
+
+
+
