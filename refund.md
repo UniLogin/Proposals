@@ -110,7 +110,7 @@ TODO: Finish
 
 ### Transaction Gas Cost
 * `transactionCost` - constant transaction cost
-* `dataGas` - cost of transaction data. We can estimate it by fill `executeSigned` function with parameters (with fixedGas as 0) and then get data. Then we calculate 4 gas for every zero byte and 68 for every non-zero byte of data. After all we add 128 ( 64 * 2 - fixed gas can't be higher than 8 MLN (2 bytes)).
+* `dataGas` - cost of transaction data. We can estimate it by fill `executeSigned` function with parameters (with fixedGas as 0) and then get data. Then we calculate 4 gas for every zero byte and 68 for every non-zero byte of data. After all we add 192 ( 64 * 3 - fixed gas can't be higher than 8 MLN (3 bytes)).
 
 
 ### Non Measurable Execution Cost
