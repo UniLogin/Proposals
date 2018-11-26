@@ -38,33 +38,37 @@ Execution gas cost can be split into two subparts:
 As we want to guarantee a refund will always happen, let's iterate over possible reasons for revert that might prevent it:
 * **external execution** - this is revert happening in external to our smart contract execution - when doing an external call (that will be stored as an internal transaction in the blockchain history). The semantics of `call` guarantees that the call will return regardless of revert, so this case is covered.
 * **internal execution** - this revert happens when executing ERC1077 code. This is the most tricky part, as contract might want to do a number of preliminary checks that need to be updated
+* **not enough funds** - this happens when operation used more gas than the contract can pay for. This can be prevented by calculating max gas and the start of smart contract execution.
+    ```
+    function execute(...) {
+        uint maxgas = min(gaslimit, gasToken.balanceOf(this)/gasPrice);
+    }
+    ``` 
+
 * **out of gas exception** - preventing this can be achieved by preminary checks of gas at the beginning of transaction. Another way to protect relayer, from out of gas exception, is to reduce gas for call by amount needed to refund: 
     ```
     function execute(...) {
         uint maxgas = min(gaslimit, gasToken.balanceOf(this)/gasPrice);
         to.call.gas(maxgas - 50000)(data);
-        // Does not work for modules
         refund();
     }
     ``` 
-
-* **not enough funds** - this happens when operation used more gas then the contract can pay for. This can be prevented by calculating max gas and the start of smart contract execution.
-
 ## Big Data attack
 Big data attack happens when an attacker creates a message with a data field of significant size. The transaction is propagated by relayer but fails on preliminary checks (e.g. not enough gas to process transaction further) Relayer needs to pay for the whole transaction, but a refund will not happen. An attacker can drain relayer wallet that way. This can not be prevented in the general case.
-
-Our proposal: 
-```
- function execute(...) {
-    require(msg.sender == allowedRelayer); 
- }
-```
-Only selected relayer is allowed to depute execution.
 
 
 ## Relayer network and refund guarantee
 In general case, a refund cannot be guaranteed due to the front-running. At any point of time state of the contract (and blockchain can be changed) and therefore transaction that supposed to succeed will fail by the time it is being mined.
 But if we limit allowed relayers to one (which could be the case for relayer network). Then as a first preliminary check, we can rule out the wrong relayer. Now relayer can run a simulated transaction and see if it succeeds and only then propagate it to the network.
+
+Example: 
+```
+ function execute(...) {
+    require(msg.sender == allowedRelayers); 
+ }
+```
+Only selected relayer is allowed to depute execution. `require` can be implemented in module. Works as long as there is no modification before `require`. 
+
 
 ## Proposed refund schema
 We propose to split refund into two costs:
