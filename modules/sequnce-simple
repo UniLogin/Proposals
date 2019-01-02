@@ -2,12 +2,20 @@
 
 title Subscription
 actor Relayer
-participant Identity
+actor Relayer2
+actor RecurringService
+participant WalletContract
+participant Authorisation
 participant Subscription
 
+== Subscribe ==
+Relayer -> WalletContract: executeSigned(..., subscribe, ...)
+WalletContract -> Authorisation: canExecute
+WalletContract -> Subscription: subscribe
 
+== Withdrawl ==
+RecurringService -> Subscription: withdrawl()
+Subscription -> WalletContract: moduleExecute()
 
-Relayer -> Identity: executeSigned
-Identity -> Subscription: canExecute
 
 @enduml
