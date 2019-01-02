@@ -5,3 +5,4 @@ This is repository for proposals for standards in regards to Universal Logins, #
 Proposals:
 * [Modules](/modules.md)
 * [Refund](/refund.md)
+* [Authorisation](/authorisation.md)
