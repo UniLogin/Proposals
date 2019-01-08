@@ -6,3 +6,7 @@ Proposals:
 * [Modules](/modules.md)
 * [Refund](/refund.md)
 * [Authorisation](/authorisation.md)
+
+Future work:
+* Proxy contracts
+* Counterfactual deployment
