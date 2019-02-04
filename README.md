@@ -8,5 +8,5 @@ Proposals:
 * [Authorisation](/authorisation.md)
 
 Future work:
-* [Proxy contracts](/proxies.md)
+* [Proxy contracts](/proxy.md)
 * Counterfactual deployment
